@@ -1,1 +1,4 @@
 scafold
+.deps
+artifacts
+.vscode

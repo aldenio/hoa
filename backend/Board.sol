@@ -11,16 +11,35 @@ contract Board is OwnableAdministrable {
     address[] public _board;
 
     error InvalidAddress(address);
-    error AddressNotInBoard(address);
+    error NotABoardMember(address);
 
-    event MemberAddedToBoard(address indexed member);
-    event MemberRemovedFromBoard(address indexed member);
-    
+    event BoardMemberAdded(address indexed member);
+    event BoardMemberRemoved(address indexed member);
+    event BoardMemberChanged(address indexed member, address newMember);
 
     constructor(address initialOwnerAndAdmin)  OwnableAdministrable(initialOwnerAndAdmin) 
     {
     }
 
+    modifier onlyBoardMembers() {
+        if (!isBoardMember(msg.sender)) {
+            revert NotABoardMember(msg.sender);
+        }
+        _;
+    }
+
+    function getBoardSize() public view returns(uint) {
+        return _board.length;
+    }
+
+    function isBoardMember(address member) public view returns (bool) {
+        for(uint i = 1 ; i < _board.length ; i++){
+            if(_board[i] == member){
+                return true;
+            }   
+        }
+        return false;
+    } 
 
     function getBoard() public view returns (address[] memory) {
         return _board;
@@ -34,6 +53,7 @@ contract Board is OwnableAdministrable {
         for(uint i = 0 ; i < _board.length ; i++){
             if(_board[i] == address(0)){
                 _board[i] = member;
+                emit BoardMemberAdded(member);
                 return;
             }   
         }
@@ -47,10 +67,29 @@ contract Board is OwnableAdministrable {
         for(uint i = 0 ; i < _board.length ; i++){
             if(_board[i] == member){
                 delete _board[i];
+                emit BoardMemberRemoved(member);
                 return;
             }   
         }
-        revert AddressNotInBoard(member);
+        revert NotABoardMember(member);
     }
+    
+    function changeBoardMember(address member, address newMember) public onlyAdministratorOrOwner {
+        if (member == address(0)) {
+            revert InvalidAddress(member);
+         } 
+        if (newMember == address(0)) {
+            revert InvalidAddress(newMember);
+        } 
+        for(uint i = _board.length - 1 ; i >= 0 ; i--){
+            if(_board[i] == member){
+                _board[i] = newMember;
+                emit BoardMemberChanged(member, newMember);
+                return;
+            }   
+        }
+        revert NotABoardMember(member); 
+    }
+
 
 }
