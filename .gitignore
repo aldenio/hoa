@@ -3,4 +3,3 @@ scafold
 artifacts
 .vscode
 **/**/node_modules
-frontend
