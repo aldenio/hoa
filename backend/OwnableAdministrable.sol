@@ -20,16 +20,12 @@ contract OwnableAdministrable is Ownable {
     }
 
     modifier onlyAdministrator() {
-        if (admin() != _msgSender()) {
-            revert AdministrableUnauthorizedAccount(_msgSender());
-        }
+        require(admin() == _msgSender(),  AdministrableUnauthorizedAccount(_msgSender()));
         _;
     }
 
     modifier onlyAdministratorOrOwner(){
-        if (admin() != _msgSender() && _msgSender() != owner()) {
-            revert AdministrableUnauthorizedAccount(_msgSender());
-        }
+        require(_msgSender() == admin() || _msgSender() == owner(), AdministrableUnauthorizedAccount(_msgSender()));
         _;
     }
 

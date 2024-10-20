@@ -2,3 +2,5 @@ scafold
 .deps
 artifacts
 .vscode
+**/**/node_modules
+frontend

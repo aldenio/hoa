@@ -9,6 +9,7 @@ import {OwnableAdministrable} from "./OwnableAdministrable.sol";
 contract Board is OwnableAdministrable {
 
     address[] public _board;
+    uint _boardSize;
 
     error InvalidAddress(address);
     error NotABoardMember(address);
@@ -23,53 +24,45 @@ contract Board is OwnableAdministrable {
     }
 
     modifier onlyBoardMembers() {
-        if (!isBoardMember(msg.sender)) {
-            revert NotABoardMember(msg.sender);
-        }
+        require(isBoardMember(_msgSender()), NotABoardMember(msg.sender));
         _;
     }
 
-    function getBoardSize() public view returns(uint) {
-        return _board.length;
+    modifier onlyNonBoardMembers(address member) {
+        require(isBoardMember(member) == false, AlreadyBoardMember(member));
+        _;
     }
 
-    function isBoardMember(address member) public view returns (bool) {
-        for(uint i = 0 ; i < _board.length ; i++){
-            if(_board[i] == member){
-                return true;
-            }   
-        }
-        return false;
-    } 
-
-    function getBoard() public view returns (address[] memory) {
-        return _board;
+    modifier onlyValidAddress(address arg) {
+        require(arg != address(0), InvalidAddress(arg));
+        _;
     }
 
-    function addToBoard(address member) public onlyAdministratorOrOwner {
-        if (member == address(0)) {
-            revert InvalidAddress(member);
-        }
-        if (isBoardMember(member)) {
-            revert AlreadyBoardMember(member);
-        }
+    function addToBoard(address member) public 
+        onlyValidAddress(member) 
+        onlyNonBoardMembers(member)
+        onlyAdministratorOrOwner 
+    {
         for(uint i = 0 ; i < _board.length ; i++){
             if(_board[i] == address(0)){
                 _board[i] = member;
+                _boardSize++;
                 emit BoardMemberAdded(member);
                 return;
             }   
         }
         _board.push(member);
+        _boardSize++;
     }
 
-    function removeFromBoard(address member) public onlyAdministratorOrOwner {
-        if (member == address(0)) {
-            revert InvalidAddress(member);
-        }
+    function removeFromBoard(address member) public 
+        onlyValidAddress(member)  
+        onlyAdministratorOrOwner 
+    {
         for(uint i = 0 ; i < _board.length ; i++){
             if(_board[i] == member){
                 delete _board[i];
+                _boardSize--;
                 emit BoardMemberRemoved(member);
                 return;
             }   
@@ -77,13 +70,11 @@ contract Board is OwnableAdministrable {
         revert NotABoardMember(member);
     }
     
-    function changeBoardMember(address member, address newMember) public onlyAdministratorOrOwner {
-        if (member == address(0)) {
-            revert InvalidAddress(member);
-         } 
-        if (newMember == address(0)) {
-            revert InvalidAddress(newMember);
-        } 
+    function changeBoardMember(address member, address newMember) public 
+        onlyValidAddress(member) 
+        onlyValidAddress(newMember)  
+        onlyAdministratorOrOwner 
+    {
         for(uint i = 0; i < _board.length; i++){
             if (_board[i] == member) {
                 _board[i] = newMember;
@@ -94,5 +85,23 @@ contract Board is OwnableAdministrable {
         revert NotABoardMember(member); 
     }
 
+    function getBoard() public view returns (address[] memory) {
+        return _board;
+    }
 
+    function getBoardSize() public view returns(uint) {
+        return _boardSize;
+    }
+
+    function isBoardMember(address member) public view 
+        onlyValidAddress(member) 
+        returns (bool) 
+    {
+        for(uint i = 0 ; i < _board.length ; i++){
+            if(_board[i] == member){
+                return true;
+            }   
+        }
+        return false;
+    } 
 }

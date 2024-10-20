@@ -5,14 +5,14 @@ pragma solidity ^0.8.20;
 
 import {FundsManager} from "./FundsManager.sol";
 
-contract Polls is FundsManager {
+contract HoaInsight is FundsManager {
 
     mapping (uint => bool[]) public votes;
     mapping (uint => address[]) public whoVoted;
 
     error AlreadyVotedForThisProject(address, uint);
 
-    constructor(address _erc20Token)  FundsManager(_erc20Token, msg.sender) {
+    constructor(address _erc20Token)  FundsManager(_erc20Token, _msgSender()) {
     }
 
     function startPoll(string calldata _name, string calldata _description, uint _budget) external onlyAdministrator {
@@ -27,7 +27,7 @@ contract Polls is FundsManager {
     
     function submitVote(uint projectId, bool vote) external onlyBoardMembers  {  // submit vote for the project 
         require(isProjectActive(projectId), InvalidProjectStatus(projectId));
-        if (hasMemberAlreadyVoted(projectId, msg.sender)) {
+        if (hasMemberAlreadyVotedForProject(msg.sender, projectId)) {
             revert AlreadyVotedForThisProject(msg.sender, projectId);
         }
         votes[projectId].push(vote);  
@@ -36,14 +36,13 @@ contract Polls is FundsManager {
         if (_allBoardHasVoted(projectId)){
             if (_wasProjectUnanimousVotedYes(projectId)){
                 _approveProject(projectId);
-                _withdrawProject(projectId);
             } else {
                 _rejectProject(projectId);
             }
         }
     }
 
-    function hasMemberAlreadyVoted(uint projectId, address voter) public view returns (bool){
+    function hasMemberAlreadyVotedForProject(address voter,uint projectId) public view returns (bool){
         for (uint i = 0; i < whoVoted[projectId].length; i++) {
             if (whoVoted[projectId][i] == voter) {
                return true;
@@ -55,6 +54,7 @@ contract Polls is FundsManager {
     function _allBoardHasVoted(uint projectId) internal view returns (bool){
         return votes[projectId].length >= getBoardSize();
     }
+
     function _wasProjectUnanimousVotedYes(uint projectId) internal view returns (bool)  {
         if (votes[projectId].length < getBoardSize()) return false;
         for (uint i=0; i<votes[projectId].length; i++) {
