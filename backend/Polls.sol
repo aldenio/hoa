@@ -3,22 +3,22 @@
 // Compatible with OpenZeppelin Contracts ^5.0.0
 pragma solidity ^0.8.20;
 
-import {Projects} from "./Projects.sol";
+import {FundsManager} from "./FundsManager.sol";
 
-contract Polls is Projects {
+contract Polls is FundsManager {
 
-    mapping (uint => bool[]) votes;
-    mapping (uint => address[]) whoVoted;
+    mapping (uint => bool[]) public votes;
+    mapping (uint => address[]) public whoVoted;
 
     error AlreadyVotedForThisProject(address, uint);
 
-    constructor(address initialOwnerAndAdmin)  Projects(initialOwnerAndAdmin) {
+    constructor(address _erc20Token)  FundsManager(_erc20Token, msg.sender) {
     }
 
     function startPoll(string calldata _name, string calldata _description, uint _budget) external onlyAdministrator {
         uint projectId = _addProject(_name, _description, _budget);
-        whoVoted[projectId] = new address[](getBoardSize());
-        votes[projectId] = new bool[](getBoardSize());
+        whoVoted[projectId] = new address[](0);
+        votes[projectId] = new bool[](0);
     }
 
     function cancelPoll(uint projectId) external onlyAdministrator {
@@ -26,16 +26,20 @@ contract Polls is Projects {
     }
     
     function submitVote(uint projectId, bool vote) external onlyBoardMembers  {  // submit vote for the project 
-        if (!isProjectActive(projectId)) {
-            revert InvalidProjectStatus(projectId, getProjectStatus(projectId));
-        }
+        require(isProjectActive(projectId), InvalidProjectStatus(projectId));
         if (hasMemberAlreadyVoted(projectId, msg.sender)) {
             revert AlreadyVotedForThisProject(msg.sender, projectId);
         }
         votes[projectId].push(vote);  
         whoVoted[projectId].push(msg.sender);
-        if (_wasProjectUnanimousVotedYes(projectId)){
-            _approveProject(projectId);
+
+        if (_allBoardHasVoted(projectId)){
+            if (_wasProjectUnanimousVotedYes(projectId)){
+                _approveProject(projectId);
+                _withdrawProject(projectId);
+            } else {
+                _rejectProject(projectId);
+            }
         }
     }
 
@@ -48,6 +52,9 @@ contract Polls is Projects {
         return false;
     }
 
+    function _allBoardHasVoted(uint projectId) internal view returns (bool){
+        return votes[projectId].length >= getBoardSize();
+    }
     function _wasProjectUnanimousVotedYes(uint projectId) internal view returns (bool)  {
         if (votes[projectId].length < getBoardSize()) return false;
         for (uint i=0; i<votes[projectId].length; i++) {
@@ -56,5 +63,9 @@ contract Polls is Projects {
             }
         }
         return true;
+    }
+
+    function getVotes(uint projectId) external view returns (bool[] memory)  {
+        return votes[projectId];
     }
 }

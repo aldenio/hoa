@@ -3,38 +3,38 @@
 // Compatible with OpenZeppelin Contracts ^5.0.0
 pragma solidity ^0.8.20;
 
-import  {Polls} from "./Polls.sol";
+import  {Projects} from "./Projects.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract FundsManager is Polls {
+contract FundsManager is Projects {
 
     address public erc20Token;
-    uint256 public threshold;
+    address public threasureAccount;
 
     event FundsTransferred(address indexed receiver, uint256 amount);
 
-    constructor(address _erc20Token, address initialOwnerAndAdmin)  Polls(initialOwnerAndAdmin) {
+    constructor(address _erc20Token, address initialOwnerAndAdmin)  Projects(initialOwnerAndAdmin) {
         require(_erc20Token != address(0), "Invalid ERC20 address");
         erc20Token = _erc20Token;
+        threasureAccount = initialOwnerAndAdmin;
     }
 
-    function checkAndTransfer(address receiver) external {
-        // require(msg.sender == owner, "Only the owner can execute this");
-        require(receiver != address(0), "Invalid receiver address");
+    function setThreasureAccount(address newThreasureAccount) external onlyAdministratorOrOwner {
+        threasureAccount = newThreasureAccount;
+    }
 
+    function hasEnoughBalanceToPayFor(uint projectId) internal view returns (bool) {
         IERC20 token = IERC20(erc20Token);
         uint256 balance = token.balanceOf(address(this));
-
-        if (balance >= threshold) {
-            require(token.transfer(receiver, balance), "Transfer failed");
-            emit FundsTransferred(receiver, balance);
-        }
+        return balance >= getProjectBudget(projectId);
     }
 
-    // Optional: Allow the owner to withdraw funds manually
-    function withdraw(uint projectId) external {
-        // require(msg.sender == owner, "Only the owner can withdraw");
+    function _withdrawProject(uint projectId) internal onlyValidId(projectId)  {
+        require(isProjectApproved(projectId), "Only Approved Projects can be funded.");
+        require(hasEnoughBalanceToPayFor(projectId), "Insufficient balance");
         IERC20 token = IERC20(erc20Token);
-        require(token.transfer(owner, amount), "Withdrawal failed");
+        require(token.transfer(threasureAccount, getProjectBudget(projectId)), "Withdrawal failed");
+        emit FundsTransferred(threasureAccount, getProjectBudget(projectId));
+        
     }
 }

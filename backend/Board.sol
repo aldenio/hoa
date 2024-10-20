@@ -12,6 +12,7 @@ contract Board is OwnableAdministrable {
 
     error InvalidAddress(address);
     error NotABoardMember(address);
+    error AlreadyBoardMember(address);
 
     event BoardMemberAdded(address indexed member);
     event BoardMemberRemoved(address indexed member);
@@ -33,7 +34,7 @@ contract Board is OwnableAdministrable {
     }
 
     function isBoardMember(address member) public view returns (bool) {
-        for(uint i = 1 ; i < _board.length ; i++){
+        for(uint i = 0 ; i < _board.length ; i++){
             if(_board[i] == member){
                 return true;
             }   
@@ -49,7 +50,9 @@ contract Board is OwnableAdministrable {
         if (member == address(0)) {
             revert InvalidAddress(member);
         }
-
+        if (isBoardMember(member)) {
+            revert AlreadyBoardMember(member);
+        }
         for(uint i = 0 ; i < _board.length ; i++){
             if(_board[i] == address(0)){
                 _board[i] = member;
@@ -81,8 +84,8 @@ contract Board is OwnableAdministrable {
         if (newMember == address(0)) {
             revert InvalidAddress(newMember);
         } 
-        for(uint i = _board.length - 1 ; i >= 0 ; i--){
-            if(_board[i] == member){
+        for(uint i = 0; i < _board.length; i++){
+            if (_board[i] == member) {
                 _board[i] = newMember;
                 emit BoardMemberChanged(member, newMember);
                 return;
